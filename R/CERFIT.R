@@ -36,6 +36,7 @@
 #' @param minsplit Number of observations required to continue growing tree
 #' @param minbucket Number of observations required in each child node
 #' @param maxdepth Maximum depth of tree
+#' @param oob Whether or not to use Out-of-bag sample for predictions.
 #' @param a Sigmoid approximation variable (for "sss" which is still under development)
 #' @param sampleMethod Method to sample learning sample. Default is bootstrap. Subsample
 #' takes a subsample of the original data. SubsamplebyID samples by an ID column and
@@ -75,7 +76,7 @@
 #'
 #'\eqn{Y_i = \beta_0 + \beta_1I(X_{ij} < c) + \beta_2I(Z = 1) + \beta_3I(X_{ij} < c)I(Z = 1) + \beta_4e_i + \varepsilon_i}
 #'
-#'Where \eqn{e_i} represents the propensity score. The CERIT function will estimate
+#'Where \eqn{e_i} represents the propensity score. The CERFIT function will estimate
 #'propensity score automatically when the method argument is set to observational.
 #'
 #'To control how this function estimates propensity score you can use the
@@ -120,7 +121,7 @@
 CERFIT <- function( formula, data, ntrees, subset = NULL,search=c("exhaustive","sss"),
                     method=c("RCT","observational"), PropForm=c("randomForest","CBPS","GBM", "HI"),
                     split=c("t.test"),
-                    mtry=NULL, nsplit=NULL, nsplit.random=FALSE, minsplit=20, minbucket=round(minsplit/3), maxdepth=30,
+                    mtry=NULL, nsplit=NULL, nsplit.random=FALSE, minsplit=20, minbucket=round(minsplit/3), maxdepth=30,oob = FALSE,
                     a=50, sampleMethod=c('bootstrap','subsample','subsampleByID','allData'),
                     useRes=TRUE, scale.y=FALSE)#
 {
@@ -286,7 +287,8 @@ CERFIT <- function( formula, data, ntrees, subset = NULL,search=c("exhaustive","
                     #              function(x){which(data[[idVar]] == x)}))},
                     allData = 1:nrow(data))
     sample.b <- data[obs.b,]
-    tree.b <- growTree(formula=formula, data=sample.b, subset=subset, search=search, method=method, split=split,
+    if(oob) {oob <- data[-obs.b,]} else {oob <- data[obs.b,]}
+    tree.b <- growTree(formula=formula, data=sample.b,oob = oob, subset=subset, search=search, method=method, split=split,
                        mtry=mtry, nsplit=nsplit, nsplit.random=nsplit.random, minsplit=minsplit, minbucket=minbucket, maxdepth=maxdepth, a=a,
                        scale.y=scale.y, useRes=useRes, trtlevels=trtlevels,response.type = response.type)#, useRpart=useRpart, minpvalue=minpvalue, corstr=corstr)
     list(tree=tree.b,cases=sort(unique(obs.b)))
